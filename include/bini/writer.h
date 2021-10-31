@@ -98,33 +98,6 @@ struct writer : std::vector<uint8_t> {
     }
   }
 
-  void addUtf8(char32_t c) {
-    if (c <= 0x7f) {
-      push_back(c);
-    } else {
-      size_t shift = 0;
-      if (c > 0x3ffffff) {
-        shift = 30;
-        push_back(0xFC | (c >> shift));
-      } else if (c > 0x1fffff) {
-        shift = 24;
-        push_back(0xF8 | (c >> shift));
-      } else if (c > 0xffff) {
-        shift = 18;
-        push_back(0xF0 | (c >> shift));
-      } else if (c > 0x7ff) {
-        shift = 12;
-        push_back(0xE0 | (c >> shift));
-      } else {
-        shift = 6;
-        push_back(0xC0 | (c >> shift));
-      }
-      while (shift > 0) {
-        shift -= 6;
-        push_back(0x80 | ((c >> shift) & 0x3F));
-      }
-    }
-  }
   void addpadding(size_t count, uint8_t pad) {
     for (size_t n = 0; n < count; n++) push_back(pad);
   }

@@ -88,49 +88,6 @@ struct reader {
     return readSizedbe(8);
   }
 
-  uint64_t getUtf8() {
-    uint64_t v = 0;
-    uint8_t first = read8();
-    size_t shift = 0;
-    if (first < 0x80) {
-      return first;
-    } else if (first < 0xC0) {
-      setFail();
-      return 0;
-    } else if (first < 0xE0) {
-      shift = 6;
-      v = (first & 0x1F) << shift;
-    } else if (first < 0xF0) {
-      shift = 12;
-      v = (first & 0xF) << shift;
-    } else if (first < 0xF8) {
-      shift = 18;
-      v = (first & 0x7) << shift;
-    } else if (first < 0xFC) {
-      shift = 24;
-      v = (first & 0x3) << shift;
-    } else if (first < 0xFE) {
-      shift = 30;
-      v = (first & 0x1) << shift;
-    } else if (first < 0xFF) {
-      v = 0;
-      shift = 36;
-    } else {
-      setFail();
-      return 0;
-    }
-
-    while (shift > 0) {
-      shift -= 6;
-      uint8_t byte = read8();
-      if ((byte & 0xC0) != 0x80) {
-        setFail();
-        return 0;
-      }
-      v |= (read8() & 0x3F) << shift;
-    }
-    return v;
-  }
   uint64_t getPBvar() {
     uint64_t v = 0;
     uint8_t byte = read8();
