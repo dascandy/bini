@@ -32,4 +32,49 @@ TEST_CASE("Read primitive types", "[VAR]") {
   REQUIRE(r.read8() == 0x2a);
 }
 
+TEST_CASE("Reader flags out of bounds", "[VAR]") {
+  SECTION("string") {
+    std::vector<uint8_t> source = { 0x65, 0x6c, 0x6c, 0x6f };
+    Bini::reader r(source);
+    REQUIRE(r.getString(5) == "");
+    REQUIRE(r.fail());
+  }
+  SECTION("span") {
+    std::vector<uint8_t> source = { 0x65, 0x6c, 0x6c, 0x6f };
+    Bini::reader r(source);
+    REQUIRE(r.get(5).empty());
+    REQUIRE(r.fail());
+  }
+  SECTION("int value") {
+    std::vector<uint8_t> source = { 0x65, 0x6c, 0x6c };
+    Bini::reader r(source);
+    REQUIRE(r.read32be() == 0);
+    REQUIRE(r.fail());
+  }
+  SECTION("skip beyond end") {
+    std::vector<uint8_t> source = { 0x65, 0x6c, 0x6c, 0x6f };
+    Bini::reader r(source);
+    r.skip(5);
+    REQUIRE(r.fail());
+  }
+  SECTION("unterminated pb") {
+    std::vector<uint8_t> source = { 0x95, 0xac, 0xbc, 0xdf };
+    Bini::reader r(source);
+    REQUIRE(r.getPB() == 0);
+    REQUIRE(r.fail());
+  }
+  SECTION("overlong pb") {
+    std::vector<uint8_t> source = { 0x95, 0xac, 0xbc, 0xdf, 0x80, 0x80, 0x80, 0x80, 0x80, 0x42 };
+    Bini::reader r(source);
+    REQUIRE(r.getPB() == 0);
+    REQUIRE(r.fail());
+  }
+  SECTION("too short quic value") {
+    std::vector<uint8_t> source = { 0xc5, 0x6c, 0x6c, 0x6f, 0x42, 0x45, 0x98 };
+    Bini::reader r(source);
+    REQUIRE(r.getQuic() == 0);
+    REQUIRE(r.fail());
+  }
+}
+
 

@@ -90,7 +90,7 @@ struct reader {
     uint64_t v = 0;
     uint8_t byte = read8();
     size_t shift = 0;
-    while (byte & 0x80) {
+    while (not fail() && byte & 0x80) {
       v |= (uint64_t)(byte & 0x7F) << shift;
       shift += 7;
       if (shift == 63) {
@@ -99,6 +99,7 @@ struct reader {
       }
       byte = read8();
     }
+    if (fail()) return 0;
     v |= (uint64_t)(byte & 0x7F) << shift;
     return v;
   }
@@ -120,7 +121,7 @@ struct reader {
     case 0:
       break;
     }
-    return v;
+    return fail() ? 0 : v;
   }
 
   std::span<const uint8_t> get(size_t byteCount) {
