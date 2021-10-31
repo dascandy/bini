@@ -1,9 +1,9 @@
 #pragma once
 
+#include <span>
 #include <cstdint>
 #include <cstddef>
 #include <string>
-#include <span>
 #include <vector>
 
 namespace Bini {
@@ -29,7 +29,7 @@ struct writer : std::vector<uint8_t> {
   void add32le(uint32_t v) {
     addSizedle(v, 4);
   }
-  void add64le(uint32_t v) {
+  void add64le(uint64_t v) {
     addSizedle(v, 8);
   }
 
@@ -71,6 +71,33 @@ struct writer : std::vector<uint8_t> {
     }
     push_back(v & 0x7F);
   }
+  void addQuicVar(uint64_t v) {
+    if (v < 16384) {
+      if (v < 64) {
+        push_back(v);
+      } else {
+        push_back(0x40 | (v >> 8));
+        push_back(v & 0xFF);
+      }
+    } else {
+      if (v < (1 << 30)) {
+        push_back(0x80 | (v >> 24));
+        push_back((v >> 16) & 0xFF);
+        push_back((v >> 8) & 0xFF);
+        push_back((v >> 0) & 0xFF);
+      } else {
+        push_back(0xC0 | (v >> 56));
+        push_back((v >> 48) & 0xFF);
+        push_back((v >> 40) & 0xFF);
+        push_back((v >> 32) & 0xFF);
+        push_back((v >> 24) & 0xFF);
+        push_back((v >> 16) & 0xFF);
+        push_back((v >> 8) & 0xFF);
+        push_back((v >> 0) & 0xFF);
+      }
+    }
+  }
+
   void addUtf8(char32_t c) {
     if (c <= 0x7f) {
       push_back(c);
@@ -101,6 +128,56 @@ struct writer : std::vector<uint8_t> {
   void addpadding(size_t count, uint8_t pad) {
     for (size_t n = 0; n < count; n++) push_back(pad);
   }
+};
+
+template <bool shiftLeft = true>
+struct bitwriter {
+  bitwriter() 
+  : current(0)
+  , currentBits(0)
+  {
+  }
+  operator std::vector<uint8_t>() && {
+    finalFlush();
+    return std::move(v);
+  }
+  void add(size_t bits, uint64_t value) {
+    if (bits > 57) {
+      return;
+    }
+    if (currentBits + bits > 64) {
+      flush();
+    }
+
+    if constexpr (shiftLeft) {
+      current = (current << bits) | value;
+    } else {
+      current |= (value << currentBits);
+    }
+    currentBits += bits;
+  }
+private:
+  void finalFlush() {
+    if (currentBits & 7) {
+      add(8 - (currentBits & 7), 0);
+    }
+    if (currentBits)
+      flush();
+  }
+  void flush() {
+    while (currentBits >= 8) {
+      if constexpr (shiftLeft) {
+        v.push_back((current >> (currentBits - 8)) & 0xFF);
+      } else {
+        v.push_back(current & 0xFF);
+        current >>= 8;
+      }
+      currentBits -= 8;
+    }
+  }
+  uint64_t current;
+  uint8_t currentBits;
+  std::vector<uint8_t> v;
 };
 
 }
