@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstddef>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace Bini {
@@ -60,11 +61,11 @@ struct writer : std::vector<uint8_t> {
   void add(std::span<const uint8_t> str) {
     insert(end(), str.begin(), str.end());
   }
-  void add(const std::string& str) {
+  void add(std::string_view str) {
     insert(end(), str.begin(), str.end());
   }
 
-  void addPBvar(uint64_t v) {
+  void addPB(uint64_t v) {
     while (v > 0x7F) {
       push_back((v & 0x7F) | 0x80);
       v >>= 7;
