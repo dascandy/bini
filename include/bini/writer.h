@@ -71,7 +71,7 @@ struct writer : std::vector<uint8_t> {
     }
     push_back(v & 0x7F);
   }
-  void addQuicVar(uint64_t v) {
+  void addQuic(uint64_t v) {
     if (v < 16384) {
       if (v < 64) {
         push_back(v);

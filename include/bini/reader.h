@@ -44,7 +44,7 @@ struct reader {
     uint64_t value = 0;
     size_t shift = 0;
     for (size_t n = 0; n < bytes; n++) {
-      value = value | ((*p++) << shift);
+      value = value | ((uint64_t)(*p++) << shift);
       shift += 8;
     }
     return value;
@@ -68,10 +68,8 @@ struct reader {
       return 0;
     }
     uint64_t value = 0;
-    size_t shift = 0;
     for (size_t n = 0; n < bytes; n++) {
-      value = value | ((*p++) << shift);
-      shift += 8;
+      value = (value << 8) | (*p++);
     }
     return value;
   }
@@ -104,9 +102,10 @@ struct reader {
     v |= (byte & 0x7F) << shift;
     return v;
   }
-  uint64_t getQuicVar() {
+  uint64_t getQuic() {
     uint64_t v = read8();
-    uint8_t type = (v & 0x3) >> 6;
+    uint8_t type = (v & 0xC0) >> 6;
+    v = (v & 0x3F);
     switch(type) {
     case 3:
       v = (v << 8) | read8();
