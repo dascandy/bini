@@ -133,6 +133,18 @@ struct reader {
     p += byteCount;
     return rv;
   }
+  template <size_t N>
+  std::array<uint8_t, N> getArray() {
+    std::array<uint8_t, N> rv;
+    if (fail() || sizeleft() < N) {
+      setFail();
+      return rv;
+    }
+    memcpy(rv.data(), p, N);
+    p += N;
+    return rv;
+  }
+  
   std::string_view getString(size_t length) {
     if (fail() || sizeleft() < length) {
       setFail();
@@ -140,6 +152,19 @@ struct reader {
     }
     std::string_view rv{(const char*)p, length};
     p += length;
+    return rv;
+  }
+  std::string_view getStringNT() {
+    if (fail()) {
+      return std::string_view{};
+    }
+    char* end = (char*)memchr((char*)p, '\0', e-p);
+    if (not end) {
+      setFail();
+      return std::string_view{};
+    }
+    std::string_view rv{(const char*)p, size_t(end - (const char*)p)};
+    p = (uint8_t*)end + 1;
     return rv;
   }
 

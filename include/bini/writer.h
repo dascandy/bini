@@ -64,6 +64,10 @@ struct writer : std::vector<uint8_t> {
   void add(std::string_view str) {
     insert(end(), str.begin(), str.end());
   }
+  void addNT(std::string_view str) {
+    insert(end(), str.begin(), str.end());
+    push_back('\0');
+  }
 
   void addPB(uint64_t v) {
     while (v > 0x7F) {
