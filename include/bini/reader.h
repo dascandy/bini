@@ -13,8 +13,9 @@ struct reader {
   , e(c.data() + c.size())
   {
   }
+  reader(const reader& r) = default;
   template <typename Container>
-  reader(Container& c) 
+  reader(const Container& c) 
   : p(c.data())
   , e(c.data() + c.size())
   {
