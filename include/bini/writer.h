@@ -1,5 +1,8 @@
 #pragma once
 
+#if __has_include (<stdfloat>)
+#include <stdfloat>
+#endif
 #include <span>
 #include <cstdint>
 #include <cstddef>
@@ -52,6 +55,152 @@ struct writer : std::vector<uint8_t> {
   }
   void add64be(uint64_t v) {
     addSizedbe(v, 8);
+  }
+
+#ifdef __STDCPP_BFLOAT16_T__
+  void addbfp16le(bfloat16_t val) {
+    uint16_t v;
+    memcpy(&v, &val, sizeof(v));
+    add16le(v);
+  }
+  void addbfp16be(bfloat16_t val) {
+    uint16_t v;
+    memcpy(&v, &val, sizeof(v));
+    add16be(v);
+  }
+#else
+  void addbfp16le(float val) {
+    uint32_t v;
+    memcpy(&v, &val, sizeof(v));
+    add16le(v >> 16);
+  }
+  void addbfp16be(float val) {
+    uint32_t v;
+    memcpy(&v, &val, sizeof(v));
+    add16be(v >> 16);
+  }
+#endif
+
+#ifdef __STDCPP_FLOAT16_T__
+  void addfp16le(float16_t val) {
+    uint16_t v;
+    memcpy(&v, &val, sizeof(val));
+    add16le(v);
+  }
+  void addfp16be(float16_t val) {
+    uint16_t v;
+    memcpy(&v, &val, sizeof(val));
+    add16be(v);
+  }
+#else
+  void addfp16le(float val) {
+    add16le(floattofp16(val));
+  }
+  void addfp16be(float val) {
+    add16be(floattofp16(val));
+  }
+  uint16_t floattofp16(float val) {
+    uint32_t rawval;
+    memcpy(&rawval, &val, sizeof(val));
+    uint32_t sign = (rawval & 0x80000000) >> 16;
+    uint32_t exponent = (rawval & 0x7f800000) >> 23;
+    uint32_t mantissa = (rawval & 0x007FFFFF) >> 13;
+    if (exponent < 102) {
+      // Zero, or a number too small to represent (so round to zero).
+      mantissa = 0;
+      exponent = 0;
+    } else if (exponent <= 112) {
+      // Make denormal
+      mantissa |= 0x400;
+      while (exponent <= 112) {
+        mantissa >>= 1;
+        exponent++;
+      }
+      exponent -= 113;
+    } else if (exponent < 142) {
+      exponent -= 112;
+    } else if (exponent == 255) {
+      // Infinity or NaN
+      exponent = 31;
+    } else {
+      // number too large to represent, round up to infinity
+      exponent = 31;
+      mantissa = 0;
+    }
+    return sign | (exponent << 10) | mantissa;
+  }
+#endif
+
+#ifdef __STDCPP_FLOAT32_T__
+  void addfp32le(float32_t val) {
+    uint32_t v;
+    memcpy(&v, &val, sizeof(v));
+    add32le(v);
+  }
+  void addfp32be(float32_t val) {
+    uint32_t v;
+    memcpy(&v, &val, sizeof(v));
+    add32be(v);
+  }
+#else
+  void addfp32le(float val) {
+    uint32_t v;
+    memcpy(&v, &val, sizeof(v));
+    add32le(v);
+  }
+  void addfp32be(float val) {
+    uint32_t v;
+    memcpy(&v, &val, sizeof(v));
+    add32be(v);
+  }
+#endif
+
+  static_assert(sizeof(float) == 4);
+  void addfloatle(float val) {
+    uint32_t v;
+    memcpy(&v, &val, sizeof(v));
+    add32le(v);
+  }
+  void addfloatbe(float val) {
+    uint32_t v;
+    memcpy(&v, &val, sizeof(v));
+    add32be(v);
+  }
+
+#ifdef __STDCPP_FLOAT64_T__
+  void addfp64le(float64_t val) {
+    uint64_t v;
+    memcpy(&v, &val, sizeof(v));
+    add64le(v);
+  }
+  void addfp64be(float64_t val) {
+    uint64_t v;
+    memcpy(&v, &val, sizeof(v));
+    add64be(v);
+  }
+#else
+  void addfp64le(double val) {
+    uint64_t v;
+    memcpy(&v, &val, sizeof(v));
+    add64le(v);
+  }
+  void addfp64be(double val) {
+    uint64_t v;
+    memcpy(&v, &val, sizeof(v));
+    add64be(v);
+  }
+#endif
+
+  static_assert(sizeof(double) == 8);
+  void adddoublele(double val) {
+    uint64_t v;
+    memcpy(&v, &val, sizeof(v));
+    add64le(v);
+  }
+  void adddoublebe(double val) {
+    uint64_t v;
+    memcpy(&v, &val, sizeof(v));
+    add64be(v);
   }
 
   template <size_t N>

@@ -1,5 +1,8 @@
 #pragma once
 
+#if __has_include (<stdfloat>)
+#include <stdfloat>
+#endif
 #include <span>
 #include <cstdint>
 #include <cstddef>
@@ -22,6 +25,11 @@ struct reader {
   }
   size_t sizeleft() {
     return e - p;
+  }
+  bool empty() 
+  {
+    // Also checks for fail, so you can use it as "while not empty".
+    return e >= p;
   }
   void setFail() {
     p = e + 1;
@@ -85,6 +93,168 @@ struct reader {
   }
   uint64_t read64be() {
     return readSizedbe(8);
+  }
+
+#ifdef __STDCPP_BFLOAT16_T__
+  bfloat16_t readbfp16le() {
+    uint16_t val = (uint16_t)read16le();
+    bfloat16_t rv;
+    memcpy(&rv, &val, sizeof(rv));
+    return rv;
+  }
+  bfloat16_t readbfp16be() {
+    uint16_t val = (uint16_t)read16le();
+    bfloat16_t rv;
+    memcpy(&rv, &val, sizeof(rv));
+    return rv;
+  }
+#else
+  float readbfp16le() {
+    uint32_t val = (uint32_t)read16le() << 16;
+    float rv;
+    memcpy(&rv, &val, sizeof(rv));
+    return rv;
+  }
+  float readbfp16be() {
+    uint32_t val = (uint32_t)read16be() << 16;
+    float rv;
+    memcpy(&rv, &val, sizeof(rv));
+    return rv;
+  }
+#endif
+
+#ifdef __STDCPP_FLOAT16_T__
+  float16_t readfp16le() {
+    uint16_t val = read16le();
+    float16_t rv;
+    memcpy(&rv, &val, sizeof(rv));
+    return rv;
+  }
+  float16_t readfp16be() {
+    uint16_t val = read16be();
+    float16_t rv;
+    memcpy(&rv, &val, sizeof(rv));
+    return rv;
+  }
+#else
+  float fp16tofloat(uint16_t val) {
+    uint32_t sign = (val & 0x8000) << 16;
+    uint32_t exponent = ((val & 0x7C00) >> 10) + 112;
+    uint32_t mantissa = (uint32_t(val) & 0x03FF) << 13;
+    if (exponent == 112) {
+      if (mantissa == 0) {
+        // Zeroes
+        exponent = 0;
+      } else {
+        // Denormals
+        // We need to do more work for this, as numbers that are denormal in fp16 are normal in fp32
+        while ((mantissa & 0x800000) == 0) {
+          mantissa <<= 1;
+          exponent--;
+        }
+        exponent++;
+        mantissa &= 0x7FFFFF;
+      }
+    } else if (exponent == 143) {
+      // Infinities and NANs
+      exponent = 255;
+    } else {
+      // Regular numbers
+      // No other work needed
+    }
+    float rv;
+    uint32_t value = sign | (exponent << 23) | mantissa;
+    memcpy(&rv, &value, 4);
+    return rv;
+  }
+  float readfp16le() {
+    return fp16tofloat(read16le());
+  }
+  float readfp16be() {
+    return fp16tofloat(read16be());
+  }
+#endif
+
+#ifdef __STDCPP_FLOAT32_T__
+  float32_t readfp32le() {
+    uint32_t val = read32le();
+    float32_t rv;
+    memcpy(&rv, &val, sizeof(rv));
+    return rv;
+  }
+  float32_t readfp32be() {
+    uint32_t val = read32be();
+    float32_t rv;
+    memcpy(&rv, &val, sizeof(rv));
+    return rv;
+  }
+#else
+  float readfp32le() {
+    uint32_t val = read32le();
+    float rv;
+    memcpy(&rv, &val, sizeof(rv));
+    return rv;
+  }
+  float readfp32be() {
+    uint32_t val = read32be();
+    float rv;
+    memcpy(&rv, &val, sizeof(rv));
+    return rv;
+  }
+#endif
+
+  float readfloatle() {
+    uint32_t val = read32le();
+    float rv;
+    memcpy(&rv, &val, sizeof(rv));
+    return rv;
+  }
+  float readfloatbe() {
+    uint32_t val = read32be();
+    float rv;
+    memcpy(&rv, &val, sizeof(rv));
+    return rv;
+  }
+
+#ifdef __STDCPP_FLOAT64_T__
+  float64_t readfp64le() {
+    uint64_t val = read64le();
+    float64_t rv;
+    memcpy(&rv, &val, sizeof(rv));
+    return rv;
+  }
+  float64_t readfp64be() {
+    uint64_t val = read64be();
+    float64_t rv;
+    memcpy(&rv, &val, sizeof(rv));
+    return rv;
+  }
+#else
+  double readfp64le() {
+    uint64_t val = read64le();
+    double rv;
+    memcpy(&rv, &val, sizeof(rv));
+    return rv;
+  }
+  double readfp64be() {
+    uint64_t val = read64be();
+    double rv;
+    memcpy(&rv, &val, sizeof(rv));
+    return rv;
+  }
+#endif
+
+  double readdoublele() {
+    uint64_t val = read64le();
+    double rv;
+    memcpy(&rv, &val, sizeof(rv));
+    return rv;
+  }
+  double readdoublebe() {
+    uint64_t val = read64be();
+    double rv;
+    memcpy(&rv, &val, sizeof(rv));
+    return rv;
   }
 
   uint64_t getPB() {
